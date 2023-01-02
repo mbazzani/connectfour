@@ -5,6 +5,8 @@ import random
 ROWS=6
 COLUMNS=7
 
+# Print a numpy array as a connect four board
+# Symbols to use given by icons dict
 def print_board(board):
     icons = {0:'_',1:'O',2:'X'}
     for row in board:
@@ -16,6 +18,7 @@ def print_board(board):
         print(i, end=' ')
     print(end='\n\n')
 
+# Checks if any given integer move is valid
 def valid_move(board, move):
     if move<0 or move>=COLUMNS:
         return False 
@@ -23,24 +26,27 @@ def valid_move(board, move):
         return False
     return True
 
+# Adds a token to the move column of the board
 def make_move(board, move, player):
     for i in range(ROWS-1,-1,-1):
         if board[i, move]==0:
             board[i, move]=player
             return
 
+# Undoes the last move in the given column
 def unmake_move(board, move):
     for i in range(ROWS):
         if board[i, move]!=0:
             board[i, move]=0
             return
 
-def static_eval(board):
-    return random.random()
-
+# Fill the board with zeros, except where
+# the values/entries equal player
 def one_hot(board, player):
     return np.asarray(np.isin(board, player), dtype=np.uint8)
 
+# Given a player and a board, check if the player
+# is winning in that board configuration
 def check_winning(board, player):
     new_board = one_hot(board, player)
     horizontal_kernel = np.array([[1, 1, 1, 1]])
@@ -57,17 +63,16 @@ def check_winning(board, player):
             return True
     return False
 
-def minimax(board, depth, alpha, beta, player, previous_move):
-
-    other_player = int(not bool(player-1))+1
-    #print("Player: " + str(player))
-    #print("Other:  " + str(other_player))
+# Returns the relative values of each possible move when
+# both players play optimally
+def minimax(board, depth, alpha, beta, player):
+    # Base cases
     if check_winning(board, 1):
         return 100+depth
     if check_winning(board, 2):
         return -(100+depth)
     elif depth==0:
-        return static_eval(board)
+        return random.random()
 
     # Player 1 finds highest value move
     if player==1:
@@ -75,7 +80,7 @@ def minimax(board, depth, alpha, beta, player, previous_move):
         for move in range(COLUMNS):
             if valid_move(board, move):
                 make_move(board, move, player)
-                move_eval = minimax(board, depth-1, alpha, beta, 2, move)
+                move_eval = minimax(board, depth-1, alpha, beta, 2)
                 unmake_move(board, move)
                 max_move_eval = max(max_move_eval, move_eval)
                 alpha = max(alpha, move_eval)
@@ -90,7 +95,7 @@ def minimax(board, depth, alpha, beta, player, previous_move):
             if valid_move(board, move):
                 #print_board(board)
                 make_move(board, move, player)
-                move_eval = minimax(board, depth-1, alpha, beta, 1, move)
+                move_eval = minimax(board, depth-1, alpha, beta, 1)
                 unmake_move(board, move)
                 min_move_eval = min(min_move_eval, move_eval)
                 beta = min(beta, move_eval)
@@ -98,6 +103,9 @@ def minimax(board, depth, alpha, beta, player, previous_move):
                     break
         return min_move_eval
 
+# Helper function that prompts the user with the passed message,
+# reprompts user if validity_test function returns false,
+# or if the response does not match response_type
 def prompt(message, validity_test, response_type=None):
     response=''
     while True:
@@ -118,6 +126,7 @@ def prompt(message, validity_test, response_type=None):
     return response
 
 
+# Prompt user to end program or play another game
 def prompt_end():
     yes_responses = ('Y','Ye','Yes','yes','ye','y')
     no_responses = ('N', 'No', 'no', 'n')
@@ -129,6 +138,7 @@ def prompt_end():
         return True
 
 
+# Get the player's move and add it to the board
 def player_move(board, player):
     move = prompt('What move will you make?',
                   lambda x: valid_move(board, x-1),
@@ -139,6 +149,7 @@ def player_move(board, player):
     print_board(board)
 
 
+# Get the AI's move and add it to the board
 def computer_move(board, difficulty, player):
     other_player = int(not bool(player-1))+1
     move_vals=[]
@@ -149,8 +160,7 @@ def computer_move(board, difficulty, player):
                                      difficulty, 
                                      -math.inf, 
                                      math.inf, 
-                                     other_player, 
-                                     move))
+                                     other_player))
             unmake_move(board, move)
         else:
             if(player==2):
@@ -172,9 +182,10 @@ def computer_move(board, difficulty, player):
 
 
 
+# Play one game of connect four
 def play_game():
     board = np.zeros((ROWS,COLUMNS), dtype=np.intc)
-    player = 1
+    player=1
     while True:
         computer_move(board, 6, player)
         #player_move(board, player)
