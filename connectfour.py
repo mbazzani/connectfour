@@ -2,6 +2,8 @@ import numpy as np
 from scipy.signal import convolve2d
 import math
 import random
+import time
+import os
 ROWS=6
 COLUMNS=7
 
@@ -149,10 +151,12 @@ def player_move(board, player):
     print_board(board)
 
 
-# Get the AI's move and add it to the board
+# Get the score of every move
+# If computer is player 1, maximize the score, otherwise minimize it
+# Add move to board
 def computer_move(board, difficulty, player):
-    other_player = int(not bool(player-1))+1
     move_vals=[]
+    # For every valid move, store the score
     for move in range(COLUMNS):
         if(valid_move(board, move)):
             make_move(board, move, player)
@@ -160,16 +164,18 @@ def computer_move(board, difficulty, player):
                                      difficulty, 
                                      -math.inf, 
                                      math.inf, 
-                                     other_player))
+                                     other_player(player)))
             unmake_move(board, move)
+        # Give move the worst value possible if it is invalid
         else:
             if(player==2):
-                move_vals.append(-math.inf)
-            if(player==1):
                 move_vals.append(math.inf)
+            if(player==1):
+                move_vals.append(-math.inf)
 
     min_val = min(move_vals)
     max_val = max(move_vals)
+
     if(player==1):
         move = move_vals.index(max_val)
     else:
@@ -181,22 +187,37 @@ def computer_move(board, difficulty, player):
     print_board(board)
 
 
+# Returns 1 if passed 2, and 2 if passed 1
+def other_player(player):
+    return int((not bool(player-1)))+1
 
 # Play one game of connect four
 def play_game():
+    os.system("clear")
     board = np.zeros((ROWS,COLUMNS), dtype=np.intc)
-    player=1
+
+    # Get player order
+    human_player = prompt("Which player will you be? [1/2]",
+                    lambda x: x==1 or x==2,
+                    int)
+    computer_player=other_player(human_player)
+    current_player=1
+
     while True:
-        computer_move(board, 6, player)
-        #player_move(board, player)
-        if(check_winning(board,player)):
-            print('Player 1 wins!')
-            break
-        #computer_move(board, 4, player+1)
-        player_move(board, player+1)
-        if(check_winning(board,player+1)):
-            print('Player 2 wins!')
-            break
+        #Play computer or player depending on the round
+        if(current_player==human_player):
+            player_move(board, human_player)
+            if check_winning(board, human_player):
+               print("You win!")
+               break
+        else:
+            computer_move(board, 5, computer_player)
+            if check_winning(board, computer_player):
+               print("You lose")
+               break
+            time.sleep(2)
+
+        current_player=other_player(current_player)
 
 if __name__=='__main__':
     play_game()
