@@ -217,8 +217,5 @@ def play_game():
 
         current_player=other_player(current_player)
 
-if __name__=='__main__':
-    play_game()
-    while not prompt_end():
+    if not prompt_end():
         play_game()
-
