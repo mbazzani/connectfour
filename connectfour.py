@@ -2,7 +2,6 @@ import numpy as np
 from scipy.signal import convolve2d
 import math
 import random
-import time
 import os
 ROWS=6
 COLUMNS=7
@@ -215,7 +214,6 @@ def play_game():
             if check_winning(board, computer_player):
                print("You lose")
                break
-            time.sleep(2)
 
         current_player=other_player(current_player)
 
