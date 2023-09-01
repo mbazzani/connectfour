@@ -1,5 +1,7 @@
 import numpy as np
+import pickle
 from scipy.signal import convolve2d
+from functools import lru_cache
 import math
 import random
 import os
@@ -27,12 +29,12 @@ def play_game():
         # Play computer or player depending on the round
         if current_player == human_player:
             player_move(board, human_player)
-            if check_winning(board, human_player):
+            if check_winning((board), human_player):
                 print("You win!")
                 break
         else:
             computer_move(board, 5, computer_player)
-            if check_winning(board, computer_player):
+            if check_winning((board), computer_player):
                 print("You lose")
                 break
 
@@ -59,7 +61,7 @@ def computer_move(board, difficulty, player):
     for move in range(COLUMNS):
         if valid_move(board, move):
             make_move(board, move, player)
-            move_val = minimax(board, difficulty, -math.inf, math.inf, other_player(player))
+            move_val = minimax(to_tuple(board), difficulty, -math.inf, math.inf, other_player(player))
             unmake_move(board, move)
             move_vals.append(move_val)
         else:
@@ -74,9 +76,16 @@ def computer_move(board, difficulty, player):
     print('Here is the computer\'s move:')
     print_board(board)
 
+def to_tuple(a):
+    try:
+        return tuple(to_tuple(i) for i in a)
+    except TypeError:
+        return a
 # Returns the relative values of each possible move when
 # both players play optimally
+@lru_cache(maxsize=100000)
 def minimax(board, depth, alpha, beta, player):
+    board = np.array(board)
     # Base cases
     if check_winning(board, 1):
         return 100 + depth
@@ -91,7 +100,7 @@ def minimax(board, depth, alpha, beta, player):
         for move in range(COLUMNS):
             if valid_move(board, move):
                 make_move(board, move, player)
-                move_eval = minimax(board, depth-1, alpha, beta, 2)
+                move_eval = minimax(to_tuple(board), depth-1, alpha, beta, 2)
                 unmake_move(board, move)
                 max_move_eval = max(max_move_eval, move_eval)
                 alpha = max(alpha, move_eval)
@@ -104,7 +113,7 @@ def minimax(board, depth, alpha, beta, player):
         for move in range(COLUMNS):
             if valid_move(board, move):
                 make_move(board, move, player)
-                move_eval = minimax(board, depth-1, alpha, beta, 1)
+                move_eval = minimax(to_tuple(board), depth-1, alpha, beta, 1)
                 unmake_move(board, move)
                 min_move_eval = min(min_move_eval, move_eval)
                 beta = min(beta, move_eval)
@@ -114,7 +123,7 @@ def minimax(board, depth, alpha, beta, player):
 
 # Given a player and a board, check if the player
 # is winning in that board configuration
-def check_winning(board, player):
+def check_winning(board: tuple, player):
     new_board = one_hot(board, player)
     horizontal_kernel = np.array([[1, 1, 1, 1]])
     vertical_kernel = np.transpose(horizontal_kernel)
@@ -161,7 +170,7 @@ def prompt_end():
 # reprompts user if validity_test function returns false,
 # or if the response does not match response_type
 def prompt(message,
-        validity_test=lambda x: True,
+        validity_test=lambda _: True,
         response_type=None):
     response=''
     while True:
@@ -209,4 +218,15 @@ def one_hot(board, player):
     return np.asarray(np.isin(board, player), dtype=np.uint8)
 
 if __name__=="__main__":
-    play_game()
+    try:
+        with open("cache.pkl", "rb") as file:
+            cache_data = pickle.load(file)
+            minimax.cache_clear(**cache_data)
+    except FileNotFoundError:
+        pass  # File doesn't exist on the first run
+    try:
+        play_game()
+    except Exception as exc:
+        print(exc)
+    with open("cache.pkl", "wb") as file:
+        pickle.dump(minimax.cache_clear, file)
